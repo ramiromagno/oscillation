@@ -1,0 +1,20 @@
+Package: oscillation
+Title: A Statistical Pipeline for Identifying Oscillatory
+        Genes in Unsynchronized Single Cell RNA-Seq
+Version: 0.0.0.9000
+Authors@R: c(
+    person(given = "Ramiro",
+           family = "Magno",
+           role = c("aut", "cre"),
+           email = "ramiro.magno@gmail.com",
+           comment = c(ORCID = "YOUR-ORCID-ID")),
+    person(given = "Ning",
+           family = "Leng",
+           role = "ctb",
+           comment = "Author of included Oscope source files")
+           )
+Description: A fork of Oscope.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.0.2

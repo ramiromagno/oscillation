@@ -1,0 +1,371 @@
+%\VignetteIndexEntry{Oscope_vigette}
+\documentclass{article}
+%\usepackage{fullpage}
+\usepackage{graphicx, graphics, epsfig,setspace,amsmath, amsthm}
+%\usepackage{hyperref}
+\usepackage{natbib}
+%\usepackage{listings}
+\usepackage{moreverb}
+
+<<style-Sweave, eval=TRUE, echo=FALSE, results=tex>>=
+BiocStyle::latex()
+@
+
+\begin{document}
+\title{Oscope: a statistical pipeline for identifying oscillatory genes in unsynchronized single cell RNA-seq experiments}
+\author{Ning Leng and Christina Kendziorski}
+\maketitle
+\tableofcontents
+\setcounter{tocdepth}{2}
+
+\section{Introduction}
+\label{sec:intro}
+Oscope (as detailed in Leng* {\it et al.}, 2015 \cite{Leng15b}) is
+a statistical pipeline for identifying oscillatory genes in unsynchronized
+single cell RNA-seq (scRNA-seq) experiments.
+Oscope capitalizes on the
+fact that cells from an unsynchronized population
+represent distinct states in a system.
+Oscope utilizes co-regulation information among
+oscillators to identify groups of putative oscillating genes, and then
+reconstructs the cyclic order of samples for each group, defined as the order
+that specifies each sample's position within one cycle of the oscillation,
+referred to as a base cycle.
+The reconstructed order is based on minimizing distance between each gene's
+expression and its gene-specific profile defined by the group's base cycle
+allowing for phase shifts between different genes. For different groups of
+genes following independent oscillatory processes and/or having distinct
+frequencies, the cyclic orders need not be the same.
+
+The flowchart of Oscope is shown in Figure \ref{fig:Flow}.
+As shown, Oscope first fits a sinusoidal function to all gene pairs and choose
+those with significantly high sine scores. Once candidate genes are identified,
+K-medoids is applied to cluster genes into groups with similar frequencies,
+but possibly different phases. Then, for each group, Oscope recovers the cyclic
+order which orders cells by their position within one cycle of the oscillatory
+process underlying the group.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=.5\textwidth]{Pipe.pdf}
+\caption{The Oscope flowchart.}
+\label{fig:Flow}
+\end{figure}
+
+
+\clearpage
+\section{Run Oscope}
+\label{sec:quickstart}
+Before analysis can proceed, the Oscope package
+must be loaded into the working space:
+<<cache=TRUE, eval=TRUE, echo=TRUE>>=
+library(Oscope)
+@
+
+\subsection{Required inputs}
+\label{sec:startgenedeinput}
+\begin{flushleft}
+{\bf Data}:  The object \verb+Data+ should be a $G-by-S$ matrix
+containing the expression values for each gene and each sample,
+where $G$ is the number of genes and $S$ is the number of samples. These
+values should exhibit estimates of gene expression
+across samples. Counts of this nature may be obtained from RSEM (\cite{Li11b}),
+Cufflinks (\cite{Trapnell12}), or a similar approach.
+Cross-sample library size normalization should be performed. An cross-sample
+library size normalization by median normalization are shown in section \ref{sec:startnorm}.
+\end{flushleft}
+
+\noindent The object \verb+OscopeExampleData+ is a simulated data matrix containing
+500 rows of genes and 30 columns of samples. The genes are named
+\verb+g1, g2, ...+ and the samples are named \verb+S1, S2, ...+
+Among the 500 genes, gene \verb+g1-g120+ are simulated as oscillators. 
+Two groups of oscillators (\verb+g1-g60+ and \verb+g61-g120+) 
+are simulated following independent frequencies and orders.
+The data set also include a gene group (g301-g305) that has purely linear correlation
+between genes (but not oscillating).
+The other genes are simulated as noise.
+
+<<>>=
+data(OscopeExampleData)
+str(OscopeExampleData)
+set.seed(10)
+@
+
+\subsection{Normalization}
+\label{sec:startnorm}
+Oscope requires cross-sample normalization to be applied  to adjust for sequencing depth 
+differences among different samples.
+Here, the library size factors may be obtained via the function \verb+MedianNorm+, which reproduces the
+median normalization approach
+in DESeq \citep{Anders10}.
+<<>>=
+Sizes <- MedianNorm(OscopeExampleData)
+@
+
+\noindent If quantile normalization is preferred, library size factors
+may be obtained via the function \verb+QuantileNorm+
+(for example, \verb+QuantileNorm(GeneMat,.75)+ for Upper-Quartile Normalization in \cite{Bullard10}).
+
+\noindent To obtain the normalized expression matrix, user may used the GetNormalizedMat() function:
+<<>>=
+DataNorm <- GetNormalizedMat(OscopeExampleData, Sizes)
+@
+
+\subsection{Pre-processing}
+\label{sec:startprocess}
+It is
+well-accepted that scRNA-seq suffers from high level of technical noise. It is also known that
+the low expressers are more affected by the noises. %XXcitationXX
+Therefore, we suggest users to apply Oscope on a subset of genes with high mean and high variance
+to reduce the effects from technical noises. Note that once the base cycle order is recovered,
+a user may apply ordinary time-series oscillatory gene detection algorithms based on the recovered
+orders to identify oscillatory genes in the genes with lower mean and variance.
+
+Function CalcMV() may be used to calculate the estimated mean and variance of genes, as well as
+select genes with high mean and high variance.
+For example:
+\begin{figure}[h!]
+\centering
+\setkeys{Gin}{width=0.5\textwidth}
+<<eval=TRUE, fig=TRUE>>=
+MV <- CalcMV(Data = OscopeExampleData, Sizes = Sizes)
+str(MV$GeneToUse)
+DataSubset <- DataNorm[MV$GeneToUse,]
+@
+\caption{Mean-Variance plot generated by CalcMV() function.}
+\label{fig:MV}
+\end{figure}
+
+Figure \ref{fig:MV} shows the output figure of the CalcMV() function.
+By default, CalcMV() defines genes with mean expression greater than 100 as high expressers.
+To change it, a user may specify parameter \verb+MeanCutLow+ to another number.
+To define the high variance genes, the CalcMV() function will fit a linear
+regression on log(variance) $\sim$ log(mean) on genes with high mean. Genes
+with variance above this line are considered as genes with high mean and
+high variance (marked in green in Figure \ref{fig:MV}).
+The upper bound of mean may be specified
+using \verb+MeanCutHigh+.
+
+
+While working with a normalized data set, a user may specify \verb+Sizes = NULL+ and \verb+NormData = TRUE+.
+For example:
+
+<<eval=FALSE, fig=FALSE>>=
+MV2 <- CalcMV(Data = DataNorm, Sizes = NULL, NormData = TRUE)
+str(MV2$GeneToUse)
+DataSubset2 <- DataNorm[MV2$GeneToUse,]
+@
+
+
+The CalcMV() function can also take unnormalized data set. 
+By setting \verb+Sizes = NULL+ and \verb+NormData = FALSE+,
+the CalcMV() function will calculate the library size factor via MedianNorm() function
+first, then calculate mean and variance after adjusting for library sizes.
+A user can also input pre-defined library size factor for unnormalized data via
+parameter \verb+Sizes+.
+
+\subsection{Rescaling}
+\label{sec:startrescale}
+Since the paired-sine model in Oscope requires input values to be between -1 and 1, a rescaling step
+is needed prior to apply Oscope.
+Function \verb+NormForSine+ may be used for the rescaling.
+For example:
+
+<<>>=
+DataInput <- NormForSine(DataNorm)
+@
+
+The NormForSine() function will rescale the expression measurements to values between -1 and 1.
+To reduce the influences of potential outliers, the default setting in NormForSine() function
+will impute the extreme values in each gene to its upper/lower bound.
+By default settings,a gene's upper (lower) bound is set to be its 95th (5th) quantile of expression.
+These two quantile thresholds may be changed via parameters \verb+qt1+ and \verb+qt2+.
+If \verb+qt1+ and \verb+qt2+ are set as 0 and 1, no outlier imputation will take place.
+
+
+
+
+\subsection{Oscope: paired-sine model}
+\label{sec:startsine}
+
+We developed a paired-sine model to identify gene pairs that are oscillating following the same
+process. Genes following the same process are assumed to have same frequency, but allow for
+phase shifts.
+To apply the paired-sine model, user may use the \verb+OscopeSine()+ function.
+<<eval=FALSE, echo=TRUE>>=
+SineRes <- OscopeSine(DataInput)
+str(SineRes)
+@
+
+The \verb+OscopeSine+ function can be parallelized by setting \verb+parallel=TRUE+ (see below). A user may change the settings, such as the number of cores,  via
+the parameter \verb+parallelParam+.
+
+<<cache=TRUE, eval=TRUE, echo=TRUE>>=
+SineRes <- OscopeSine(DataInput, parallel=TRUE)
+str(SineRes)
+@
+
+
+The output of \verb+OscopeSine()+ contains 3 matrices. SimiMat shows the sine score between each pair of
+input genes. The higher the sine score, the more likely that two genes are oscillating
+following the same process. DiffMat shows the distance (dissimilarity estimates) between each pair of genes. Note that
+sine score = -log10 (distance) for any pair of genes.
+ShiftMat shows the estimated phase shift between each pair of genes.
+
+If only high mean high variance genes are of interest, a user may run the paired-sine model on the genes
+defined in section \ref{sec:startprocess}: 
+<<eval=FALSE>>=
+DataInput2 <- NormForSine(DataSubset)
+SineRes2 <- OscopeSine(DataInput2)
+@
+
+\subsection{Oscope: K-medoids algorithm}
+\label{sec:startkm}
+
+Oscope incorporated a K-medoids algorithm to cluster candidate oscillatory gene pairs identified by the
+paired-sine model into gene groups. Function \verb+OscopeKM()+ may be used to apply the K-medoids algorithm:
+<<>>=
+KMRes <- OscopeKM(SineRes, maxK = 10)
+print(KMRes)
+@
+Input of \verb+OscopeKM()+ function is required to be the output of the \verb+OscopeSine()+ function.
+The K-mediods algorithm uses the distance matrix estimated in the paired-sine model as the dissimilarity
+metric.
+By setting \verb+maxK = 10+, \verb+OscopeKM()+ function will search for the optimal $K$ among 2-10
+by maximizing the Silhouette distance.
+By default settings, the top 5\% genes will be used in the K-medoids clustering.
+The percentage may be changed by setting parameter \verb+quan+.
+We define a gene's minimal distance as the shortest distance between the gene and any other genes.
+The top genes are defined as those that have the shortest minimal distances.
+The distances may be calculated using the \verb+OscopeSine()+ function described in section
+\ref{sec:startsine}.
+If \verb+maxK+ is not specified, the maximum $K$ will be set to the integer part of (number of top genes)/10.
+In this example, the optimal number of clusters is 3. The 3 clusters contain 
+\Sexpr{length(KMRes[[1]])}, \Sexpr{length(KMRes[[2]])} and \Sexpr{length(KMRes[[3]])} genes, respectively.
+
+
+\subsection{Flag clusters with small within-cluster sine scores and/or small within-cluster phase shifts}
+
+To infer the significance of each group, Oscope evaluates each group's sine score distribution using permuted data.
+For each group, Oscope permutes cell order for each gene independently.
+By default, Oscope only takes groups whose median sine score
+in original data is greater than its 90$^{th}$ quantile in permuted data. Function \verb+FlagCluster()+ 
+will flag groups who fail to meet this criteria. 
+
+
+To avoid detecting gene groups with purely linear relationship, we suggest users to only consider
+gene clusters with some within-group phase differences.
+For any pair of genes $gi,gj$ within a group, define
+$\upsilon_{gi,gj}=min((\pi-\eta_{gi,gj}), \eta_{gi,gj})$, in which
+$\eta_{gi,gj}=\psi_{gi,gj}$ mod $\pi$.
+Oscope's default takes groups whose 90$^{th}$ quantile of $\upsilon_{gi,gj}$'s is greater
+than $\pi/4$ for further order recovery.
+Function \verb+FlagCluster()+ could also flag gene clusters with small within-cluster phase shifts.
+
+
+For example:
+%<<cache=TRUE, eval=TRUE, echo=TRUE, results=hide>>=
+<<cache=TRUE, eval=TRUE, echo=TRUE>>=
+ToRM <- FlagCluster(SineRes, KMRes, DataInput)
+@
+<<cache=TRUE, eval=TRUE, echo=TRUE>>=
+print(ToRM$FlagID_bysine)
+print(ToRM$FlagID_byphase)
+print(ToRM$FlagID) # all flagged clusters 
+@
+The \verb+FlagCluster()+ function requires outputs of \verb+OscopeSine()+ and \verb+OscopeKM()+.
+Summary statistics will be displayed in R console.
+In the sine score analysis part, the function will show summary statistics of the sine scores in the original data and permuted data.
+In the phase shift analysis part, the function will show summary statistics of the $\upsilon$'s within each cluster. 
+Cluster 1 is flagged in this example because of the lack of within-cluster phase shift. 
+This is expected since gene 301-305 are simulated as linearly correlated but are not oscillating.
+To exclude cluster 1 in the order recovery step:
+<<>>=
+KMResUse <- KMRes[-ToRM$FlagID]
+print(KMResUse)
+@
+
+
+\subsection{Oscope: extended nearest insertion}
+\label{sec:starteni}
+
+Oscope reconstructs the base cycle order for each of the selected gene clusters.
+To reconstruct the base cycle orders, the \verb+OscopeENI()+ function may be used:
+<<eval=FALSE, echo=TRUE>>=
+ENIRes <- OscopeENI(KMRes = KMResUse, Data = DataInput, NCThre = 100)
+print(ENIRes)
+@
+
+The \verb+OscopeENI+ function can also be parallelized by setting \verb+parallel=TRUE+ (see below). A user may change the settings, such as the number of cores, via
+the parameter \verb+parallelParam+.
+
+<<eval=FALSE, echo=TRUE>>=
+ENIRes <- OscopeENI(KMRes = KMResUse, Data = DataInput, NCThre = 100, parallel=TRUE)
+@
+
+The \verb+OscopeENI()+ requires gene lists and rescaled
+expression matrix as inputs.
+The \verb+OscopeENI()+ function will perform the extended nearest algorithm and the 2-opt algorithm.
+Parameter \verb+NCThre+ may be used to define the iteration stopping criteria of the 2-opt algorithm.
+Here we set \verb+NCThre = 100+ for demonstration purpose. By setting \verb+NCThre = 100+,
+The 2-opt algorithm will be stopped when there are no updates for 100 iterations. The default setting of
+\verb+NCThre+ is 1000.
+
+Once the recovered cell orders are obtained, a user may reorder the expression matrix
+and apply ordinary time series methods
+(e.g. FFT) on all the genes to find weaker oscillators (and oscillators
+with lower mean or variance, if only high mean high vanriance genes are used in
+previous steps). For example, the reordered data set may be obtained by:
+
+<<eval=FALSE, echo=TRUE>>=
+DataNorm2 <- DataNorm[,ENIRes[["cluster2"]]]
+@
+
+\clearpage
+
+
+To visualize the recovered base cycle profiles of 6 genes in cluster 2:
+%\begin{figure}[h!]
+%\centering
+%\setkeys{Gin}{width=.8\textwidth}
+<<eval=FALSE, fig=FALSE>>=
+par(mfrow = c(3,2))
+for(i in 1:6)
+plot(DataNorm[KMResUse[["cluster2"]][i], ENIRes[["cluster2"]]],
+xlab = "Recovered order", ylab = "Expression",
+main = KMResUse[["cluster2"]][i])
+@
+%\caption{Recovered base cycle profiles of 6 genes in cluster 2 identified by Oscope.}
+%\label{fig:cluster1}
+%\end{figure}
+
+%\clearpage
+
+To visualize the recovered base cycle profiles of 6 genes in cluster 3:
+%\begin{figure}[h!]
+%\centering
+%\setkeys{Gin}{width=.8\textwidth}
+<<eval=FALSE, fig=FALSE>>=
+par(mfrow = c(3,2))
+for(i in 1:6)
+plot(DataNorm[KMResUse[["cluster3"]][i], ENIRes[["cluster3"]]],
+xlab = "Recovered order", ylab = "Expression",
+main = KMResUse[["cluster3"]][i])
+@
+%\caption{Recovered base cycle profiles of 6 genes in cluster 3 identified by Oscope.}
+%\label{fig:cluster2}
+%\end{figure}
+
+\section{Session info}
+Here is the output of sessionInfo on the system on which this document was compiled:
+<<>>=
+print(sessionInfo())
+@
+
+\vspace{1cm}
+%\bibliographystyle{natbib}
+
+
+\bibliography{lengetal}
+
+\end{document}
