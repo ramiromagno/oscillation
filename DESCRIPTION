@@ -26,4 +26,6 @@ Imports:
     dplyr,
     purrr,
     magrittr,
-    broom
+    broom,
+    data.table,
+    R.utils
