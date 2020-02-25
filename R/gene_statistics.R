@@ -154,3 +154,68 @@ median_norm_size_factors <- function(m) {
   matrixStats::colMedians((m / geom_means)[geom_means > 0, ])
 }
 
+#' Median over positive values
+#' 
+#' This function computes the median over strictly positive values, \code{Inf}
+#' excluded.
+#' 
+#' @param x A numeric vector.
+#'
+#' @return The median value, a scalar.
+#'
+#' @export
+median2 <- function(x) median(x[x > 0 & x < Inf])
+
+#' Geometric mean
+#' 
+#' This function computes the geometric mean.
+#' 
+#' @param x A numeric vector.
+#' @param na.rm Whether to remove \code{NA} before calculation.
+#' @param zero.propagate Whether zeros are allowed to propagate in the
+#'   calculation or whether they are treated as \code{NA}.
+#'
+#' @return The geometric mean.
+#'
+#' @export
+gm_mean = function(x,
+                   na_rm = TRUE,
+                   zero_propagate = TRUE) {
+  if (any(x < 0, na.rm = TRUE)) {
+    return(NaN)
+  }
+  if (zero_propagate) {
+    if (any(x == 0, na.rm = TRUE)) {
+      return(0)
+    }
+    exp(mean(log(x), na.rm = na_rm))
+  } else {
+    exp(sum(log(x[x > 0]), na.rm = na_rm) / length(x))
+  }
+}
+
+#' Median normalisation size factors (alternative)
+#' 
+#' This function calculates the median normalisation size factors of a matrix of
+#' gene expression counts following the code of the function
+#' \code{\link[EBSeq]{MedianNorm}} when the parameter \code{alternative=TRUE}.
+#' 
+#' @param m Matrix of gene expression values. Rows are genes and columns are
+#'   samples.
+#'
+#' @return A vector of size factors, one for each sample.
+#'
+#' @export
+median_norm_size_factors2 <- function(m) {
+
+  # m2: a square matrix whose dimension is the same as the number of columns of
+  # m.
+  m2 <- apply(m, 2, function(j) apply(m, 2, function(jj) median2(j/jj)))
+
+  sample_indices <- seq_len(ncol(m))
+  
+  # The index combination -j, j ensures that the diagonal values of m2 are
+  # excluded from the computation.
+  sapply(sample_indices, function(j) gm_mean(m2[-j, j]))
+  
+}
