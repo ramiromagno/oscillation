@@ -28,4 +28,5 @@ Imports:
     magrittr,
     broom,
     data.table,
-    R.utils
+    R.utils,
+    matrixStats

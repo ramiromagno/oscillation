@@ -7,7 +7,8 @@
 #' Binomial} distribution, a commonly assumed model for the distribution of gene
 #' (or isoform) expression counts.
 #' 
-#' @param m Matrix of gene expression values. Rows are genes and columns are samples.
+#' @param m Matrix of gene expression values. Rows are genes and columns are
+#'   samples.
 #' @param p_min Minimum value for parameter p of the Negative Binomial
 #'   distribution to be assumed when estimating q.
 #' 
@@ -117,3 +118,39 @@ mean_variance_fit <- function(gene_stat_df) {
     )
   
 }
+
+#' Calculate the pseudo-reference sample
+#' 
+#' This function calculates the geometric mean across samples. This can be
+#' regarded as a pseudo-reference sample. See
+#' \href{http://genomebiology.com/2010/11/10/R106}{Anders & Huber (2010)}, page
+#' 3, denominator in equation 5.
+#' 
+#' @param m Matrix of gene expression values. Rows are genes and columns are
+#'   samples.
+#'   
+#' @return A vector of geometric means, one for each gene (can be regarded as
+#'   pseudo-reference sample for each gene).
+#'   
+#' @export   
+pseudo_ref_sample <- function(m) exp(rowMeans(log(m)))
+
+#' Median normalisation size factors
+#' 
+#' This function calculates the median normalisation size factors of a matrix of gene
+#' expression counts according to
+#' \href{http://genomebiology.com/2010/11/10/R106}{Anders & Huber (2010)}, page
+#' 3, equation 5.
+#' 
+#' @param m Matrix of gene expression values. Rows are genes and columns are
+#'   samples.
+#'
+#' @return A vector of size factors, one for each sample.
+#'
+#' @export
+median_norm_size_factors <- function(m) {
+  
+  geom_means <- pseudo_ref_sample(m)
+  matrixStats::colMedians((m / geom_means)[geom_means > 0, ])
+}
+

@@ -7,7 +7,8 @@
 gene_statistics(m, p_min = 0)
 }
 \arguments{
-\item{m}{Matrix of gene expression values. Rows are genes and columns are samples.}
+\item{m}{Matrix of gene expression values. Rows are genes and columns are
+samples.}
 
 \item{p_min}{Minimum value for parameter p of the Negative Binomial
 distribution to be assumed when estimating q.}
