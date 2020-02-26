@@ -4,10 +4,13 @@
 \alias{median2}
 \title{Median over positive values}
 \usage{
-median2(x)
+median2(x, na_rm = FALSE)
 }
 \arguments{
 \item{x}{A numeric vector.}
+
+\item{na_rm}{A logical value indicating whether NA values should be stripped
+before the computation proceeds.}
 }
 \value{
 The median value, a scalar.

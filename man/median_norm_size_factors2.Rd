@@ -4,11 +4,14 @@
 \alias{median_norm_size_factors2}
 \title{Median normalisation size factors (alternative)}
 \usage{
-median_norm_size_factors2(m)
+median_norm_size_factors2(m, na_rm = FALSE)
 }
 \arguments{
 \item{m}{Matrix of gene expression values. Rows are genes and columns are
 samples.}
+
+\item{na_rm}{A logical value indicating whether NA values should be stripped
+before the computation proceeds.}
 }
 \value{
 A vector of size factors, one for each sample.

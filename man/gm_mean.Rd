@@ -4,7 +4,7 @@
 \alias{gm_mean}
 \title{Geometric mean}
 \usage{
-gm_mean(x, na_rm = TRUE, zero_propagate = TRUE)
+gm_mean(x, na_rm = FALSE, zero_propagate = TRUE)
 }
 \arguments{
 \item{x}{A numeric vector.}

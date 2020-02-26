@@ -161,11 +161,13 @@ median_norm_size_factors <- function(m) {
 #' excluded.
 #' 
 #' @param x A numeric vector.
+#' @param na_rm A logical value indicating whether NA values should be stripped
+#'   before the computation proceeds.
 #'
 #' @return The median value, a scalar.
 #'
 #' @export
-median2 <- function(x) median(x[x > 0 & x < Inf])
+median2 <- function(x, na_rm = FALSE) median(x[x > 0 & x < Inf], na.rm = na_rm)
 
 #' Geometric mean
 #' 
@@ -180,7 +182,7 @@ median2 <- function(x) median(x[x > 0 & x < Inf])
 #'
 #' @export
 gm_mean = function(x,
-                   na_rm = TRUE,
+                   na_rm = FALSE,
                    zero_propagate = TRUE) {
   if (any(x < 0, na.rm = TRUE)) {
     return(NaN)
@@ -203,20 +205,22 @@ gm_mean = function(x,
 #' 
 #' @param m Matrix of gene expression values. Rows are genes and columns are
 #'   samples.
+#' @param na_rm A logical value indicating whether NA values should be stripped
+#'   before the computation proceeds.
 #'
 #' @return A vector of size factors, one for each sample.
 #'
 #' @export
-median_norm_size_factors2 <- function(m) {
+median_norm_size_factors2 <- function(m, na_rm = FALSE) {
 
   # m2: a square matrix whose dimension is the same as the number of columns of
   # m.
-  m2 <- apply(m, 2, function(j) apply(m, 2, function(jj) median2(j/jj)))
+  m2 <- apply(m, 2, function(j) apply(m, 2, function(jj) median2(j/jj, na_rm = na_rm)))
 
   sample_indices <- seq_len(ncol(m))
   
   # The index combination -j, j ensures that the diagonal values of m2 are
   # excluded from the computation.
-  sapply(sample_indices, function(j) gm_mean(m2[-j, j]))
+  sapply(sample_indices, function(j) gm_mean(m2[-j, j], na_rm = na_rm))
   
 }
