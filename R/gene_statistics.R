@@ -184,6 +184,9 @@ median2 <- function(x, na_rm = FALSE) median(x[x > 0 & x < Inf], na.rm = na_rm)
 gm_mean = function(x,
                    na_rm = FALSE,
                    zero_propagate = TRUE) {
+  if (all(is.na(x), na.rm = TRUE))
+    return(NA_real_)
+  
   if (any(x < 0, na.rm = TRUE)) {
     return(NaN)
   }
