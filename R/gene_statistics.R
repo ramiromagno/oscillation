@@ -151,7 +151,7 @@ pseudo_ref_sample <- function(m) exp(rowMeans(log(m)))
 median_norm_size_factors <- function(m) {
   
   geom_means <- pseudo_ref_sample(m)
-  matrixStats::colMedians((m / geom_means)[geom_means > 0, ])
+  matrixStats::colMedians((m / geom_means)[geom_means > 0, , drop = FALSE])
 }
 
 #' Median over positive values
