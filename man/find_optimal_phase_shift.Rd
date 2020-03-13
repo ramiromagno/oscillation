@@ -17,6 +17,11 @@ search.}
 \item{method}{The name of the optimisation method to be used by
 \code{\link[stats]{optim}}.}
 }
+\value{
+A \code{\link[tibble]{tibble}} where rows are for each pair of genes,
+  and five columns: gene 1, gene 2, \code{psi}, \code{se_epsilon} and
+  \code{score}.
+}
 \description{
 This function determines the optimal phase shift between two gene expression
 profiles \code{x1} and \code{x2} according to the paired-sine model, see

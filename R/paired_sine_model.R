@@ -35,6 +35,10 @@ squared_epsilon <- Vectorize(
 #' @param method The name of the optimisation method to be used by
 #'   \code{\link[stats]{optim}}.
 #' 
+#' @return A \code{\link[tibble]{tibble}} where rows are for each pair of genes,
+#'   and five columns: gene 1, gene 2, \code{psi}, \code{se_epsilon} and
+#'   \code{score}.
+#' 
 #' @export
 find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B") {
   
@@ -50,7 +54,7 @@ find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B"
   
   tibble::tibble(psi = out$par,
                  sq_epsilon = out$value,
-                 score = -log(out$value)
+                 score = -log10(out$value)
                  )
 }
 
@@ -65,7 +69,7 @@ find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B"
 #' @param m Matrix of gene expression values. Rows are genes and columns are samples.
 #' @param verbose Whether to be chatty.
 #' @param sort_by_score Whether to descending sort the final dataframe by the
-#'   score column, i.e., by \eqn{-log(sq_epsilon)}. If \code{FALSE}, the
+#'   score column, i.e., by \eqn{-log10(sq_epsilon)}. If \code{FALSE}, the
 #'   returned dataframe will be sort by the original gene pair combinations.
 #' @param parallel Whether to split the computation across the virtual cores.
 #' @param cores The number of virtual cores (vCPUs) to use if \code{parallel}
@@ -78,7 +82,7 @@ find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B"
 #'   \item{gene_2}{Name of gene 2.}
 #'   \item{psi}{Optimal phase shift.}
 #'   \item{sq_epsilon}{Squared epsilon (\eqn{\epsilon_{1,2}^2}).}
-#'   \item{score}{Score defined as \eqn{-log(\epsilon_{1,2}^2})). This metric
+#'   \item{score}{Score defined as \eqn{-log10(\epsilon_{1,2}^2})). This metric
 #'   can be used to sort the table of results, and select candidate oscillatory
 #'   genes as those in the top gene pairs.}
 #' } 

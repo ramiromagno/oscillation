@@ -18,7 +18,7 @@ paired_sine_analysis(
 \item{verbose}{Whether to be chatty.}
 
 \item{sort_by_score}{Whether to descending sort the final dataframe by the
-score column, i.e., by \eqn{-log(sq_epsilon)}. If \code{FALSE}, the
+score column, i.e., by \eqn{-log10(sq_epsilon)}. If \code{FALSE}, the
 returned dataframe will be sort by the original gene pair combinations.}
 
 \item{parallel}{Whether to split the computation across the virtual cores.}
@@ -34,7 +34,7 @@ A dataframe with the optimal phase estimates. Each row corresponds to
   \item{gene_2}{Name of gene 2.}
   \item{psi}{Optimal phase shift.}
   \item{sq_epsilon}{Squared epsilon (\eqn{\epsilon_{1,2}^2}).}
-  \item{score}{Score defined as \eqn{-log(\epsilon_{1,2}^2})). This metric
+  \item{score}{Score defined as \eqn{-log10(\epsilon_{1,2}^2})). This metric
   can be used to sort the table of results, and select candidate oscillatory
   genes as those in the top gene pairs.}
 }
