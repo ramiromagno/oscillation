@@ -82,7 +82,7 @@ find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B"
 #'   \item{gene_2}{Name of gene 2.}
 #'   \item{psi}{Optimal phase shift.}
 #'   \item{sq_epsilon}{Squared epsilon (\eqn{\epsilon_{1,2}^2}).}
-#'   \item{score}{Score defined as \eqn{-log10(\epsilon_{1,2}^2})). This metric
+#'   \item{score}{Score defined as \eqn{-log10(\epsilon_{1,2}^2}). This metric
 #'   can be used to sort the table of results, and select candidate oscillatory
 #'   genes as those in the top gene pairs.}
 #' } 
