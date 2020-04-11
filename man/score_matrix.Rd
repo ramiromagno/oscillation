@@ -31,3 +31,10 @@ This function expects a data frame \code{df}, as returned by the function
 a wide format of the gene-pairs scores (originally in long format in
 \code{df}).
 }
+\examples{
+m <- cbind(t(combn(1:5, m = 2, simplify = TRUE)), 1:10)
+colnames(m) <- c('x', 'y', 'z')
+
+score_matrix(m, gene_1 = 'x', gene_2 = 'y', score = 'z')
+ 
+}

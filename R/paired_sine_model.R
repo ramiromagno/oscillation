@@ -85,7 +85,8 @@ find_optimal_phase_shift <- function(x1, x2, psi_start = 0., method = "L-BFGS-B"
 #'   \item{score}{Score defined as \eqn{-log10(\epsilon_{1,2}^2}). This metric
 #'   can be used to sort the table of results, and select candidate oscillatory
 #'   genes as those in the top gene pairs.}
-#' } 
+#' }
+#' 
 #' @export
 paired_sine_analysis <- function(m,
                                  verbose = FALSE,
@@ -136,4 +137,3 @@ paired_sine_analysis <- function(m,
   
   return(df)
 }
-
